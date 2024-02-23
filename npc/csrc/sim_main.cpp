@@ -1,29 +1,36 @@
-#include <verilated.h>
-#include "../obj_dir/Vtop.h"
-#include <verilated_vcd_c.h>
-#include <cstdlib>
-#include <ctime>
+#include <nvboard.h>
+#include <Vtop.h>
 
-int main(int argc,char *argv[])
+static TOP_NAME dut;
+
+void nvboard_bind_all_pins(TOP_NAME *top);
+
+static void single_cycle()
 {
-    Vtop *top=new Vtop;
-    srand(time(0));
-    Verilated::traceEverOn(true);
-    VerilatedVcdC *tfp=new VerilatedVcdC;
-    top->trace(tfp,10);
-    tfp->open("waves.vcd");
+    dut.clk = 0;
+    dut.eval();
+    dut.clk = 1;
+    dut.eval();
+}
 
-    for (int i=0;i<10;i++)
+static void reset(int n)
+{
+    dut.rst = 1;
+    while (n-- > 0)
+        single_cycle();
+    dut.rst = 0;
+}
+
+int main()
+{
+    nvboard_bind_all_pins(&dut);
+    nvboard_init();
+
+    reset(10);
+
+    while (1)
     {
-        top->a=rand()%2;
-        top->b=rand()%2;
-        top->eval();
-        tfp->dump(i);
+        nvboard_update();
+        single_cycle();
     }
-    tfp->flush();
-    tfp->close();
-    delete tfp;
-    delete top;
-    
-    return 0;
 }
