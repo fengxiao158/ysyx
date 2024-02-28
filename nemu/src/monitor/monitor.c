@@ -32,8 +32,8 @@ static void welcome() {
   Log("Build time: %s, %s", __TIME__, __DATE__);
   printf("Welcome to %s-NEMU!\n", ANSI_FMT(str(__GUEST_ISA__), ANSI_FG_YELLOW ANSI_BG_RED));
   printf("For help, type \"help\"\n");
-  Log("Exercise: Please remove me in the source code and compile NEMU again.");
-  assert(0);
+  // Log("Exercise: Please remove me in the source code and compile NEMU again.");
+  // assert(0);
 }
 
 #ifndef CONFIG_TARGET_AM
@@ -50,7 +50,7 @@ static long load_img() {
   if (img_file == NULL) {
     Log("No image is given. Use the default build-in image.");
     return 4096; // built-in image size
-  }
+  }//此时设定了img_file==NULL，所以NEMU依旧运行内置的客户程序
 
   FILE *fp = fopen(img_file, "rb");
   Assert(fp, "Can not open '%s'", img_file);
@@ -102,25 +102,25 @@ void init_monitor(int argc, char *argv[]) {
   /* Perform some global initialization. */
 
   /* Parse arguments. */
-  parse_args(argc, argv);
+  parse_args(argc, argv); //弄出一个操作界面，不同的输入产生不一样的输出
 
   /* Set random seed. */
-  init_rand();
+  init_rand(); //播下一个随机种子
 
   /* Open the log file. */
-  init_log(log_file);
+  init_log(log_file); //打开日志文件
 
   /* Initialize memory. */
-  init_mem();
+  init_mem(); //初始化内存
 
   /* Initialize devices. */
-  IFDEF(CONFIG_DEVICE, init_device());
+  IFDEF(CONFIG_DEVICE, init_device()); //没有定义，没进行其他操作
 
   /* Perform ISA dependent initialization. */
-  init_isa();
+  init_isa(); //对ISA进行初始化
 
   /* Load the image to memory. This will overwrite the built-in image. */
-  long img_size = load_img();
+  long img_size = load_img(); //因为没有指定参数，NEMU将会继续运行内置客户程序
 
   /* Initialize differential testing. */
   init_difftest(diff_so_file, img_size, difftest_port);

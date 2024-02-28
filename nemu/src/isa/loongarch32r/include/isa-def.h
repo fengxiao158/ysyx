@@ -19,7 +19,7 @@
 #include <common.h>
 
 typedef struct {
-  word_t gpr[32];
+  word_t gpr[32]; //32位的寄存器
   vaddr_t pc;
 } loongarch32r_CPU_state;
 

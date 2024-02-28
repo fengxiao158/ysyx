@@ -74,7 +74,7 @@ static void exec_once(Decode *s, vaddr_t pc) {
 static void execute(uint64_t n) {
   Decode s;
   for (;n > 0; n --) {
-    exec_once(&s, cpu.pc);
+    exec_once(&s, cpu.pc); //让CPU执行当前PC指向的一条指令，然后更新PC
     g_nr_guest_inst ++;
     trace_and_difftest(&s, cpu.pc);
     if (nemu_state.state != NEMU_RUNNING) break;
@@ -108,7 +108,7 @@ void cpu_exec(uint64_t n) {
 
   uint64_t timer_start = get_time();
 
-  execute(n);
+  execute(n); //传入的是-1,但是该参数是无符号类型的，则该数非常大，64位全为1
 
   uint64_t timer_end = get_time();
   g_timer += timer_end - timer_start;

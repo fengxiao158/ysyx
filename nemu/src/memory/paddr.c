@@ -21,9 +21,17 @@
 #if   defined(CONFIG_PMEM_MALLOC)
 static uint8_t *pmem = NULL;
 #else // CONFIG_PMEM_GARRAY
-static uint8_t pmem[CONFIG_MSIZE] PG_ALIGN = {};
+static uint8_t pmem[CONFIG_MSIZE] PG_ALIGN = {}; //每个内存位置存放一个字节大小的数据，共128MB大小
 #endif
 
+/**
+ * @brief 
+ * 
+ * @param paddr 
+ * @return uint8_t* 返回值是地址，该地址的值是内存位置+偏移量-基地址，因为RISC-V32的物理地址均从0x80000000开始
+ * 因此，如果CPU需要访问这个地址，我们需要让其最终访问pmem[0]，从而可以正确访问客户程序的第一条指令，这种机制有一个
+ * 专门的名字，叫地址映射。
+ */
 uint8_t* guest_to_host(paddr_t paddr) { return pmem + paddr - CONFIG_MBASE; }
 paddr_t host_to_guest(uint8_t *haddr) { return haddr - pmem + CONFIG_MBASE; }
 

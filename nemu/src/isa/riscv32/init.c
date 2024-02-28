@@ -28,16 +28,18 @@ static const uint32_t img [] = {
 
 static void restart() {
   /* Set the initial program counter. */
-  cpu.pc = RESET_VECTOR;
+  cpu.pc = RESET_VECTOR; //将CPU的程序计数器设为RESET_VECTOR，让这个CPU从制定的内存位置开始访问客户程序
 
   /* The zero register is always 0. */
-  cpu.gpr[0] = 0;
+  cpu.gpr[0] = 0; //对于RISCV32，他们的0号寄存器总是存放着0,所以我们对他进行初始化
 }
 
 void init_isa() {
   /* Load built-in image. */
-  memcpy(guest_to_host(RESET_VECTOR), img, sizeof(img));
+  memcpy(guest_to_host(RESET_VECTOR), img, sizeof(img)); /*将内置的客户程序读入到内存中,CPU从RESET_VECTOR
+  开始执行，因此，需要将该客户程序存放在内存的RESET_VECTOR这个位置开始
+  */
 
   /* Initialize this virtual computer system. */
-  restart();
+  restart(); //初始化CPU的状态，包括程序计数器以及0号寄存器
 }

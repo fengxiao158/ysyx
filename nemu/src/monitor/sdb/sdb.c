@@ -43,7 +43,7 @@ static char* rl_gets() {
 }
 
 static int cmd_c(char *args) {
-  cpu_exec(-1);
+  cpu_exec(-1); //传入-1,但是因为他的参数是无符号类型的，这样会使得传入的数非常大，64位全为1
   return 0;
 }
 
@@ -98,7 +98,7 @@ void sdb_set_batch_mode() {
 
 void sdb_mainloop() {
   if (is_batch_mode) {
-    cmd_c(NULL);
+    cmd_c(NULL); //输入c之后，客户程序会执行，当客户程序达到要求的循环次数，或者执行了nemu_trap指令，才会结束
     return;
   }
 
