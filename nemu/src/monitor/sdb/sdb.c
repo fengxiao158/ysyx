@@ -18,6 +18,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include <memory/paddr.h>
 
 static int is_batch_mode = false;
 
@@ -54,6 +55,56 @@ static int cmd_q(char *args) {
 
 static int cmd_help(char *args);
 
+static int cmd_si(char *args){
+  char *arg = strtok(NULL, " ");
+  cpu_exec(*arg);
+
+  return 0;
+}
+
+static int cmd_info(char *args){
+  char *arg = strtok(NULL, " ");
+  if (*arg=='r')
+  {
+    isa_reg_display();
+  }
+  else if (*arg=='w')
+  {
+
+  }
+
+  return 0;
+}
+
+static int cmd_x(char *args){
+  char *arg1 = strtok(NULL, " ");
+  char *arg2 = strtok(NULL, " ");
+  int n=strtol(arg1,NULL,10);
+  paddr_t expr=strtol(arg2,NULL,16);
+  
+  paddr_t value;
+
+  for (int i=0;i<n;i++){
+    value=paddr_read(expr+i,4); //打印pmem_read的值
+    printf("%x ",value);
+  }
+
+  printf("\n");
+  return 0;
+}
+
+static int cmd_p(char *args){
+  return 0;
+}
+
+static int cmd_w(char *args){
+  return 0;
+}
+
+static int cmd_d(char *args){
+  return 0;
+}
+
 static struct {
   const char *name;
   const char *description;
@@ -64,14 +115,19 @@ static struct {
   { "q", "Exit NEMU", cmd_q },
 
   /* TODO: Add more commands */
-
+  {"si","Let the program N instructions step by step before pausing execution.WhenNis not ptovided,the default is 1,",cmd_si},
+  {"info","Print register status or print watchpoint information.",cmd_info},
+  {"x","Evaluate the expression EXPR to obtain its value,then output N consecutive 4-byte memory addresses starting from the result in hexadecimal format.",cmd_x},
+  {"p","Evaluate the expression EXPR to obtain its value",cmd_p},
+  {"w","Pause program execution when value of the expression EXPR changes",cmd_w},
+  {"d","Delete the watchpoint with index N.",cmd_d}
 };
 
 #define NR_CMD ARRLEN(cmd_table)
 
 static int cmd_help(char *args) {
   /* extract the first argument */
-  char *arg = strtok(NULL, " ");
+  char *arg = strtok(NULL, " ");  //每调用一次，就分割一次
   int i;
 
   if (arg == NULL) {
@@ -106,7 +162,7 @@ void sdb_mainloop() {
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */
-    char *cmd = strtok(str, " ");
+    char *cmd = strtok(str, " "); //字符串分割函数，将str里面的字符串按照设定的" "分割
     if (cmd == NULL) { continue; }
 
     /* treat the remaining string as the arguments,
