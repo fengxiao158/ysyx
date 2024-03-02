@@ -94,7 +94,16 @@ static int cmd_x(char *args){
 }
 
 static int cmd_p(char *args){
-  return 0;
+  bool state=malloc(sizeof(bool));
+  expr(args,&state);
+  if (state==true)
+  {
+    return true;
+  }
+  else 
+    panic("cmd_p error!");
+  free(&state);
+  return false;
 }
 
 static int cmd_w(char *args){

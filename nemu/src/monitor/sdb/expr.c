@@ -21,7 +21,7 @@
 #include <regex.h>
 
 enum {
-  TK_NOTYPE = 256, TK_EQ,
+  TK_NOTYPE = 256, TK_EQ,TK_NUM
 
   /* TODO: Add more token types */
 
@@ -36,17 +36,24 @@ static struct rule {
    * Pay attention to the precedence level of different rules.
    */
 
-  {" +", TK_NOTYPE},    // spaces
-  {"\\+", '+'},         // plus
+  {" +", TK_NOTYPE},    // spaces 有个加号，是为了能匹配多个空格
+  {"\\+", '+'},         // plus "\\"是转义字符
   {"==", TK_EQ},        // equal
+  {"-",'-'},
+  {"\\*",'*'},
+  {"/",'/'},
+  {"[0-9]+", TK_NUM},
+  {"\\(",'('},
+  {"\\)",')'},
 };
 
 #define NR_REGEX ARRLEN(rules)
 
-static regex_t re[NR_REGEX] = {};
+static regex_t re[NR_REGEX] = {}; //用于存储已编译的正则表达式模式的数组
 
 /* Rules are used for many times.
  * Therefore we compile them only once before any usage.
+ *在简易调试器初始化的时候调用该初始化函数
  */
 void init_regex() {
   int i;
@@ -63,19 +70,27 @@ void init_regex() {
 }
 
 typedef struct token {
-  int type;
-  char str[32];
+  int type; //type用于token类型
+  char str[32]; //sre用于记录数字，比如123这样的十进制整数
 } Token;
 
-static Token tokens[32] __attribute__((used)) = {};
-static int nr_token __attribute__((used))  = 0;
+static Token tokens[32] __attribute__((used)) = {}; /*用于按顺序存放已经被识别出的token信息
+后面的attribute用于告诉编译器这个这个东西可能没用，但依旧要编译，“={}”用于将数组初始化*/
+static int nr_token __attribute__((used))  = 0;/*用于指示已经被识别出的token数目*/
 
+/**
+ * @brief 用于识别token
+ * 
+ * @param e 
+ * @return true 
+ * @return false 
+ */
 static bool make_token(char *e) {
   int position = 0;
   int i;
   regmatch_t pmatch;
 
-  nr_token = 0;
+  nr_token = 0; 
 
   while (e[position] != '\0') {
     /* Try all rules one by one. */
@@ -92,16 +107,46 @@ static bool make_token(char *e) {
         /* TODO: Now a new token is recognized with rules[i]. Add codes
          * to record the token in the array `tokens'. For certain types
          * of tokens, some extra actions should be performed.
+         * 将识别出来的token记录下来，空格是例外，要单独处理
          */
-
         switch (rules[i].token_type) {
-          default: TODO();
+          case '+':
+            tokens[nr_token].type='+'; 
+            nr_token++;
+            break;
+          case '-':
+            tokens[nr_token].type='-'; 
+            nr_token++;
+            break;
+          case '*':
+            tokens[nr_token].type='*'; 
+            nr_token++;
+            break;
+          case '/':
+            tokens[nr_token].type='/'; 
+            nr_token++;
+            break;
+          case TK_NUM:
+            strncpy(tokens[nr_token].str,substr_start,substr_len);  //将数字赋给str
+            tokens[nr_token].str[substr_len]='\0'; //末尾加上空
+            tokens[nr_token].type=TK_NUM;
+            nr_token++;
+            break;
+          case '(':
+            tokens[nr_token].type='('; 
+            nr_token++;
+            break;
+          case ')':
+            tokens[nr_token].type=')'; 
+            nr_token++;
+            break;
+          case TK_NOTYPE:
+            break;
+          default: panic("tokens recognize wrong");
         }
-
         break;
       }
     }
-
     if (i == NR_REGEX) {
       printf("no match at position %d\n%s\n%*.s^\n", position, e, position, "");
       return false;
@@ -113,13 +158,16 @@ static bool make_token(char *e) {
 
 
 word_t expr(char *e, bool *success) {
-  if (!make_token(e)) {
-    *success = false;
+  bool state;
+  success=&state;
+  if (make_token(e)==false) {
+    state=false;
     return 0;
   }
 
   /* TODO: Insert codes to evaluate the expression. */
-  TODO();
+  // TODO();
 
+  state=true;
   return 0;
 }
