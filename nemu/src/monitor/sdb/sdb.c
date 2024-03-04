@@ -19,6 +19,7 @@
 #include <readline/history.h>
 #include "sdb.h"
 #include <memory/paddr.h>
+#include <debug.h>
 
 static int is_batch_mode = false;
 
@@ -94,15 +95,17 @@ static int cmd_x(char *args){
 }
 
 static int cmd_p(char *args){
-  bool state=malloc(sizeof(bool));
-  expr(args,&state);
-  if (state==true)
+  bool *state=malloc(sizeof(bool));
+  word_t value=expr(args,state);
+  if (*state==true)
   {
+    printf("value=%d\n",value);
+    free(state);
     return true;
   }
   else 
     panic("cmd_p error!");
-  free(&state);
+  free(state);
   return false;
 }
 
@@ -199,9 +202,40 @@ void sdb_mainloop() {
   }
 }
 
+void test_expr()
+{
+  FILE *fp=fopen("/home/xiaofeng/ysyx-workbench/nemu/tools/gen-expr/input","r");
+  if (fp==NULL) panic("test_expr error1!");
+
+  char *expression=NULL; //存储从文件中读取的表达式
+  word_t correct_value; //用于存储从文件中读取的预期结果
+  size_t len=0; //读取行的长度
+  __ssize_t read; //读取的字符数
+  bool *success=malloc(sizeof(bool));
+  word_t expr_value;
+  while (1){
+    if (fscanf(fp,"%u",&correct_value)==-1) break;
+    read=getline(&expression,&len,fp);
+    expression[read-1]='\0';
+    expr_value=expr(expression,success);
+    // printf("%s\n",expression);
+    // if (*success!=true) panic("test_expr error2!");
+    if (correct_value!=expr_value){
+      printf("%s\n",expression);
+      printf("expected: %u,got: %u\n",correct_value,expr_value);
+      // panic("test_expr error3!");
+    }
+  }
+  fclose(fp);
+  free(success);
+  panic("test_expr seccess!");
+}
+
 void init_sdb() {
   /* Compile the regular expressions. */
   init_regex();
+
+  // test_expr();
 
   /* Initialize the watchpoint pool. */
   init_wp_pool();

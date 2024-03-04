@@ -74,8 +74,9 @@ typedef struct token {
   char str[32]; //sre用于记录数字，比如123这样的十进制整数
 } Token;
 
-static Token tokens[32] __attribute__((used)) = {}; /*用于按顺序存放已经被识别出的token信息
-后面的attribute用于告诉编译器这个这个东西可能没用，但依旧要编译，“={}”用于将数组初始化*/
+static Token tokens[65536] __attribute__((used)) = {}; /*用于按顺序存放已经被识别出的token信息
+后面的attribute用于告诉编译器这个这个东西可能没用，但依旧要编译，“={}”用于将数组初始化，将本来的32改成
+可以防止内存违规访问*/
 static int nr_token __attribute__((used))  = 0;/*用于指示已经被识别出的token数目*/
 
 /**
@@ -156,18 +157,128 @@ static bool make_token(char *e) {
   return true;
 }
 
+bool check_parentheses(int p, int q) {
+  if (tokens[p].type=='(' && tokens[q].type==')') {
+    int par = 0;
+    for (int i = p; i <= q; i++) {
+      if (tokens[i].type=='(') par++;
+      else if (tokens[i].type==')') par--;
+
+      if (par == 0) return i==q; //匹配到最左边的括号，括号匹配完毕
+    }
+  }
+  return false;
+}
+
+int find_major(int p, int q,bool *success) {
+  int ret = -1, par = 0, op_type = 0; /*ret是主运算符的索引，为返回值;op_type为找到的最高优先级算
+  符；par是匹配的括号数量*/
+  for (int i = p; i <= q; i++) {
+    if (tokens[i].type == TK_NUM) {
+      continue;
+    }
+    if (tokens[i].type == '(') {
+      par++; //匹配到左括号，就让par++
+    } 
+    else if (tokens[i].type == ')') {
+      if (par == 0) {
+        *success=false; //匹配到右括号的时候，但是par却为0,代表这个式子有问题
+        return 0;
+      }
+      par--; //匹配到右括号，让par--
+    } 
+    else if (par > 0) {
+      continue; //在括号里面不可能是主运算符，所以continue
+    } 
+    else {
+      int tmp_type = 0; //保存当前的运算符优先级
+      switch (tokens[i].type) {
+        case '*': case '/': tmp_type = 1; break;
+        case '+': case '-': tmp_type = 2; break;
+        default: assert(0);
+      }
+      if (tmp_type >= op_type) {
+        op_type = tmp_type; //如果最高的主运算符优先级低于当前的主运算符，则让最高的等于当前的
+        ret = i; //记录下当前的主运算符位置
+      }
+    }
+  }
+  if (par != 0){
+    *success=false;
+    return 0;
+  }
+  return ret;
+}
+
+
+word_t eval(int p, int q, bool *state) {
+  *state = true;
+  if (p > q) {
+    *state = false; //p>q的情况下，直接认为错误
+    // panic("expr_test error2.2.1!");
+    return 0;
+  } 
+  else if (p == q) {
+    if (tokens[p].type != TK_NUM) {
+      *state = false; //当p=q的时候，一定是一个数字
+      // panic("expr_test error2.2.2!");
+      return 0;
+    }
+    word_t ret = strtol(tokens[p].str, NULL, 10); //将字符串内的数字转为10进制的数据
+    return ret;
+  } 
+  else if (check_parentheses(p, q)) {
+    return eval(p+1, q-1, state); //如果有括号，则将p+1及q-1，可以将括号去掉计算
+  } 
+  else {    //此时的情况就是找到主运算符，然后将各个子式算在一起
+    int major = find_major(p, q,state); //找到主运算符
+    if (*state==false){
+      // panic("expr_test error2.2.3!");
+      return 0;
+    } 
+
+    word_t val1 = eval(p, major-1, state);
+    if (*state==false){
+      // panic("expr_test error2.2.4!");
+      return 0;
+    } 
+    word_t val2 = eval(major+1, q, state);
+    if (*state==false){
+      // panic("expr_test error2.2.5!");
+      return 0;
+    } 
+    
+    switch(tokens[major].type) {
+      case '+': return val1 + val2;
+      case '-': return val1 - val2;
+      case '*': return val1 * val2;
+      case '/': 
+        if (val2 == 0) {
+          *state = false;
+          // panic("expr_test error2.2.6!");
+          return 0;
+        } 
+        return (sword_t)val1 / (sword_t)val2;
+      default: assert(0);
+    }
+  }
+}
 
 word_t expr(char *e, bool *success) {
-  bool state;
-  success=&state;
+  word_t value;
   if (make_token(e)==false) {
-    state=false;
+    *success=false;
+    panic("find tokens error");
     return 0;
   }
 
   /* TODO: Insert codes to evaluate the expression. */
   // TODO();
-
-  state=true;
-  return 0;
+  value=eval(0,nr_token-1,success);
+  if (*success==false)
+  {
+    panic("eval error!");
+    return false;
+  }
+  return value;
 }

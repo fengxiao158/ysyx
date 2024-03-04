@@ -1,11 +1,11 @@
 module=top
 
-waves_sim:sim
+waves_show:sim_vtop
 	@./obj_dir/Vtop
 	@gtkwave waves.vcd
 	@echo "show waves"
 
-sim:V$(module) waves_sim
+sim_vtop:waves_sim
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	@echo "Write this Makefile by your self."
 	@make -C obj_dir -f Vtop.mk Vtop
@@ -16,7 +16,7 @@ V$(module):vsrc/$(module).v
 
 waves_sim:vsrc/$(module).v csrc/waves_sim.cpp
 	@echo "generate Vtop.mk"
-	@verilator -Wall --trace -cc vsrc/$(module).v --exe csrc/waves_sim.cpp
+	@verilator -Wall --trace -cc vsrc/top.v vsrc/ps2_keyboard.v --exe csrc/waves_sim.cpp
 
 TOPNAME = top
 NXDC_FILES = constr/top.nxdc

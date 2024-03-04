@@ -31,8 +31,62 @@ static char *code_format =
 "  return 0; "
 "}";
 
+//这两个东西，是为了防止buf溢出
+static char *buf_start=NULL; //指示buf开始的地方
+static char *buf_end=buf+sizeof(buf); //指示buf结束的地方
+
+unsigned int choose(int n){
+  return rand()%n;
+} 
+
+/**
+ * @brief 生成数字用的，其中的snprintf函数，是将某个类型的东西转换为字符串，第一个参数是字符串的首地址，
+ * 第二个参数是字符串长度的限制
+ * 
+ */
+static void gen_num(){
+  int num=choose(INT8_MAX);
+  if (buf_start<buf_end){
+    int buffer_long=snprintf(buf_start,buf_end-buf_start,"%d",num); //末尾包含一个空字符串
+    if (buffer_long>0){ //buffer_long是snprintf函数的返回值，返回的是当前的字符串长度
+      buf_start+=buffer_long;
+    }
+  }
+}
+
+static void gen_char(char c){
+  int buffer_long=snprintf(buf_start,buf_end-buf_start,"%c",c);
+  if (buf_start<buf_end){
+    if (buffer_long>0){
+      buf_start+=buffer_long;
+    }
+  }
+}
+
+static char ops[]={'+','-','*','/'};
+static void gen_rand_op(){
+  int op_type=choose(sizeof(ops));
+  char op=ops[op_type];
+  gen_char(op);
+}
+
 static void gen_rand_expr() {
-  buf[0] = '\0';
+  switch (choose(3))
+  {
+  case 0:
+    gen_num();
+    break;
+  case 1:
+    gen_char('(');
+    gen_rand_expr();
+    gen_char(')');
+    break;
+  default: 
+    gen_rand_expr();
+    gen_rand_op();
+    gen_rand_expr();
+    break;
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -44,6 +98,7 @@ int main(int argc, char *argv[]) {
   }
   int i;
   for (i = 0; i < loop; i ++) {
+    buf_start=buf;
     gen_rand_expr();
 
     sprintf(code_buf, code_format, buf);
@@ -53,7 +108,7 @@ int main(int argc, char *argv[]) {
     fputs(code_buf, fp);
     fclose(fp);
 
-    int ret = system("gcc /tmp/.code.c -o /tmp/.expr");
+    int ret = system("gcc /tmp/.code.c -Wall -Werror -o /tmp/.expr");
     if (ret != 0) continue;
 
     fp = popen("/tmp/.expr", "r");
