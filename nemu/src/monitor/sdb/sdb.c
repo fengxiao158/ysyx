@@ -96,7 +96,7 @@ static int cmd_x(char *args){
 
 static int cmd_p(char *args){
   bool *state=malloc(sizeof(bool));
-  word_t value=expr(args,state);
+  int value=expr(args,state);
   if (*state==true)
   {
     printf("value=%d\n",value);

@@ -21,7 +21,7 @@
 #include <regex.h>
 
 enum {
-  TK_NOTYPE = 256, TK_EQ,TK_NUM
+  TK_NOTYPE = 256, TK_EQ,TK_NUM,TK_DEREF,
 
   /* TODO: Add more token types */
 
@@ -163,7 +163,6 @@ bool check_parentheses(int p, int q) {
     for (int i = p; i <= q; i++) {
       if (tokens[i].type=='(') par++;
       else if (tokens[i].type==')') par--;
-
       if (par == 0) return i==q; //匹配到最左边的括号，括号匹配完毕
     }
   }
@@ -211,7 +210,7 @@ int find_major(int p, int q,bool *success) {
 }
 
 
-word_t eval(int p, int q, bool *state) {
+int eval(int p, int q, bool *state) {
   *state = true;
   if (p > q) {
     *state = false; //p>q的情况下，直接认为错误
@@ -224,25 +223,29 @@ word_t eval(int p, int q, bool *state) {
       // panic("expr_test error2.2.2!");
       return 0;
     }
-    word_t ret = strtol(tokens[p].str, NULL, 10); //将字符串内的数字转为10进制的数据
+    int ret = strtol(tokens[p].str, NULL, 10); //将字符串内的数字转为10进制的数据
+    if (tokens[p-1].type==TK_DEREF) ret=-ret;
     return ret;
   } 
   else if (check_parentheses(p, q)) {
     return eval(p+1, q-1, state); //如果有括号，则将p+1及q-1，可以将括号去掉计算
   } 
   else {    //此时的情况就是找到主运算符，然后将各个子式算在一起
+    if (tokens[p].type==TK_DEREF){ //如果這個式子前面的是TK_DEREF，則要讓他進行新的計算
+      return eval(p+1,q,state);
+    }
     int major = find_major(p, q,state); //找到主运算符
     if (*state==false){
       // panic("expr_test error2.2.3!");
       return 0;
     } 
 
-    word_t val1 = eval(p, major-1, state);
+    int val1 = eval(p, major-1, state);
     if (*state==false){
       // panic("expr_test error2.2.4!");
       return 0;
     } 
-    word_t val2 = eval(major+1, q, state);
+    int val2 = eval(major+1, q, state);
     if (*state==false){
       // panic("expr_test error2.2.5!");
       return 0;
@@ -264,13 +267,21 @@ word_t eval(int p, int q, bool *state) {
   }
 }
 
-word_t expr(char *e, bool *success) {
-  word_t value;
+int expr(char *e, bool *success) {
+  int value;
   if (make_token(e)==false) {
     *success=false;
     panic("find tokens error");
     return 0;
   }
+
+  for (int i=0;i<nr_token;i++){ //判断这个这个-是负号还是减号
+    if (tokens[i].type=='-'&&(i==0||tokens[i-1].type=='(')){
+      tokens[i].type=TK_DEREF;
+    }
+  }
+
+
 
   /* TODO: Insert codes to evaluate the expression. */
   // TODO();
