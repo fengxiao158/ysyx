@@ -184,6 +184,8 @@ static bool make_token(char *e) {
             nr_token++;
             break;
           case TK_REG:
+            strncpy(tokens[nr_token].str,substr_start+1,substr_len);  //将数字赋给str
+            tokens[nr_token].str[substr_len]='\0'; //末尾加上空
             tokens[nr_token].type=TK_REG;
             nr_token++;
             break;
@@ -240,7 +242,8 @@ int find_major(int p, int q,bool *success) {
       switch (tokens[i].type) {
         case '*': case '/': tmp_type = 1; break;
         case '+': case '-': tmp_type = 2; break;
-        case TK_GE: case TK_LE: case TK_LT: case TK_GT: case TK_EQ: case TK_NEQ: tmp_type=3; break;
+        case TK_AND: case TK_OR: tmp_type=3; break;
+        case TK_GE: case TK_LE: case TK_LT: case TK_GT: case TK_EQ: case TK_NEQ: tmp_type=4; break;
         default: assert(0);
       }
       if (tmp_type >= op_type) {
@@ -264,16 +267,22 @@ int eval(int p, int q, bool *state) {
     return 0;
   } 
   else if (p == q) {
-    if (tokens[p].type != TK_NUM) {
-      *state = false; //当p=q的时候，一定是一个数字
-      // panic("expr_test error2.2.2!");
+    int ret;
+    if (tokens[p].type==TK_NUM){
+      ret = strtol(tokens[p].str, NULL, 10); //将字符串内的数字转为10进制的数据
+      if (tokens[p-1].type==TK_NEGNUM) ret=-ret;
+      else if (tokens[p-1].type==TK_POSNUM) ret=ret;
+      return ret;
+    }
+    else if (tokens[p].type==TK_REG){
+      return isa_reg_str2val(tokens[p].str,state);
+    }
+    // else if (tokens[p-1].type==TK_POINT) {return paddr_read(ret,8);} //16进制的计算感觉需要单独拿出来
+    else {
+      state=false;
       return 0;
     }
-    int ret = strtol(tokens[p].str, NULL, 10); //将字符串内的数字转为10进制的数据
-    if (tokens[p-1].type==TK_NEGNUM) ret=-ret;
-    else if (tokens[p-1].type==TK_POSNUM) ret=ret;
-    else if (tokens[p-1].type==TK_POINT) {return paddr_read(ret,8);}
-    return ret;
+    return 0;
   } 
   else if (check_parentheses(p, q)) {
     return eval(p+1, q-1, state); //如果有括号，则将p+1及q-1，可以将括号去掉计算
@@ -330,6 +339,12 @@ int eval(int p, int q, bool *state) {
         else return 0;
       case TK_LE:
         if (val1<=val2) return 1;
+        else return 0;
+      case TK_AND:
+        if (val1&&val2==1) return 1;
+        else return 0;
+      case TK_OR:
+        if (val1||val2==1) return 1;
         else return 0;
       default: assert(0);
     }
