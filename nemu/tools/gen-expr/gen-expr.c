@@ -35,7 +35,7 @@ static char *code_format =
 static char *buf_start=NULL; //指示buf开始的地方
 static char *buf_end=buf+sizeof(buf); //指示buf结束的地方
 
-unsigned int choose(int n){
+int choose(int n){
   return rand()%n;
 } 
 

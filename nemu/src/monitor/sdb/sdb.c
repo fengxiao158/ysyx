@@ -104,7 +104,7 @@ static int cmd_p(char *args){
     return true;
   }
   else 
-    panic("cmd_p error!");
+    printf("Wrong input!Pleas input again.\n");
   free(state);
   return false;
 }

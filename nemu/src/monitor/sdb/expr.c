@@ -14,6 +14,7 @@
 ***************************************************************************************/
 
 #include <isa.h>
+#include <memory/paddr.h>
 
 /* We use the POSIX regex functions to process regular expressions.
  * Type 'man regex' for more information about POSIX regex functions.
@@ -21,9 +22,12 @@
 #include <regex.h>
 
 enum {
-  TK_NOTYPE = 256, TK_EQ,TK_NUM,TK_DEREF,
+  TK_NOTYPE = 256,TK_NUM,TK_NEGNUM,TK_POSNUM,TK_POINT, //TK_DERED代表着负数,TK_POSNUM代表着正数，TK_POINT代表着解指针
 
   /* TODO: Add more token types */
+  TK_EQ,TK_NEQ,TK_GT,TK_LT,TK_GE,TK_LE, //后四个分别是大于，小于，大于等于，小于等于
+  TK_AND,TK_OR,
+  TK_REG, //表示寄存器
 
 };
 
@@ -42,9 +46,17 @@ static struct rule {
   {"-",'-'},
   {"\\*",'*'},
   {"/",'/'},
-  {"[0-9]+", TK_NUM},
+  {"(0x)?[0-9]+", TK_NUM},
   {"\\(",'('},
   {"\\)",')'},
+  {"<",TK_LT},
+  {">",TK_GT},
+  {"<=",TK_LE},
+  {">=",TK_GE},
+  {"!=",TK_NEQ},
+  {"&&",TK_AND},
+  {"\\|\\|",TK_OR},
+  {"\\$\\w+",TK_REG}, //寄存器类型,输入$EXPR
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -74,9 +86,7 @@ typedef struct token {
   char str[32]; //sre用于记录数字，比如123这样的十进制整数
 } Token;
 
-static Token tokens[65536] __attribute__((used)) = {}; /*用于按顺序存放已经被识别出的token信息
-后面的attribute用于告诉编译器这个这个东西可能没用，但依旧要编译，“={}”用于将数组初始化，将本来的32改成
-可以防止内存违规访问*/
+static Token tokens[65536] __attribute__((used)) = {}; /*用于按顺序存放已经被识别出的token信息后面的attribute用于告诉编译器这个这个东西可能没用，但依旧要编译，“={}”用于将数组初始化，将本来的32改成可以防止内存违规访问*/
 static int nr_token __attribute__((used))  = 0;/*用于指示已经被识别出的token数目*/
 
 /**
@@ -139,6 +149,38 @@ static bool make_token(char *e) {
             break;
           case ')':
             tokens[nr_token].type=')'; 
+            nr_token++;
+            break;
+          case TK_LT:
+            tokens[nr_token].type=TK_LT;
+            nr_token++;
+            break;
+          case TK_GT:
+            tokens[nr_token].type=TK_GT;
+            nr_token++;
+            break;
+          case TK_LE:
+            tokens[nr_token].type=TK_LE;
+            nr_token++;
+            break;
+          case TK_GE:
+            tokens[nr_token].type=TK_GE;
+            nr_token++;
+            break;
+          case TK_NEQ:
+            tokens[nr_token].type=TK_NEQ;
+            nr_token++;
+            break;
+          case TK_AND:
+            tokens[nr_token].type=TK_AND;
+            nr_token++;
+            break;
+          case TK_OR:
+            tokens[nr_token].type=TK_OR;
+            nr_token++;
+            break;
+          case TK_REG:
+            tokens[nr_token].type=TK_REG;
             nr_token++;
             break;
           case TK_NOTYPE:
@@ -209,7 +251,6 @@ int find_major(int p, int q,bool *success) {
   return ret;
 }
 
-
 int eval(int p, int q, bool *state) {
   *state = true;
   if (p > q) {
@@ -224,14 +265,16 @@ int eval(int p, int q, bool *state) {
       return 0;
     }
     int ret = strtol(tokens[p].str, NULL, 10); //将字符串内的数字转为10进制的数据
-    if (tokens[p-1].type==TK_DEREF) ret=-ret;
+    if (tokens[p-1].type==TK_NEGNUM) ret=-ret;
+    else if (tokens[p-1].type==TK_POSNUM) ret=ret;
+    else if (tokens[p-1].type==TK_POINT) {return paddr_read(ret,8);}
     return ret;
   } 
   else if (check_parentheses(p, q)) {
     return eval(p+1, q-1, state); //如果有括号，则将p+1及q-1，可以将括号去掉计算
   } 
   else {    //此时的情况就是找到主运算符，然后将各个子式算在一起
-    if (tokens[p].type==TK_DEREF){ //如果這個式子前面的是TK_DEREF，則要讓他進行新的計算
+    if ((tokens[p].type==TK_NEGNUM)||(tokens[p].type==TK_POSNUM)||(tokens[p].type==TK_POINT)){ //如果這個式子前面的是TK_NEGNUM，則要讓他進行新的計算
       return eval(p+1,q,state);
     }
     int major = find_major(p, q,state); //找到主运算符
@@ -271,17 +314,14 @@ int expr(char *e, bool *success) {
   int value;
   if (make_token(e)==false) {
     *success=false;
-    panic("find tokens error");
     return 0;
   }
 
   for (int i=0;i<nr_token;i++){ //判断这个这个-是负号还是减号
-    if (tokens[i].type=='-'&&(i==0||tokens[i-1].type=='(')){
-      tokens[i].type=TK_DEREF;
-    }
+    if ((tokens[i].type=='-')&&(i==0||tokens[i-1].type=='(')) tokens[i].type=TK_NEGNUM;
+    else if ((tokens[i].type=='+')&&(i==0||tokens[i-1].type=='(')) tokens[i].type=TK_POSNUM;
+    else if ((tokens[i].type=='*')&&(i==0||tokens[i-1].type=='(')) tokens[i].type=TK_POINT;
   }
-
-
 
   /* TODO: Insert codes to evaluate the expression. */
   // TODO();
