@@ -171,6 +171,10 @@ static bool make_token(char *e) {
             tokens[nr_token].type=TK_NEQ;
             nr_token++;
             break;
+          case TK_EQ:
+            tokens[nr_token].type=TK_EQ;
+            nr_token++;
+            break;
           case TK_AND:
             tokens[nr_token].type=TK_AND;
             nr_token++;
@@ -236,6 +240,7 @@ int find_major(int p, int q,bool *success) {
       switch (tokens[i].type) {
         case '*': case '/': tmp_type = 1; break;
         case '+': case '-': tmp_type = 2; break;
+        case TK_GE: case TK_LE: case TK_LT: case TK_GT: case TK_EQ: case TK_NEQ: tmp_type=3; break;
         default: assert(0);
       }
       if (tmp_type >= op_type) {
@@ -295,9 +300,12 @@ int eval(int p, int q, bool *state) {
     } 
     
     switch(tokens[major].type) {
-      case '+': return val1 + val2;
-      case '-': return val1 - val2;
-      case '*': return val1 * val2;
+      case '+': 
+        return val1 + val2;
+      case '-': 
+        return val1 - val2;
+      case '*': 
+        return val1 * val2;
       case '/': 
         if (val2 == 0) {
           *state = false;
@@ -305,6 +313,24 @@ int eval(int p, int q, bool *state) {
           return 0;
         } 
         return (sword_t)val1 / (sword_t)val2;
+      case TK_GT:
+        if (val1>val2) return 1;
+        else return 0;
+      case TK_LT:
+        if (val1<val2) return 1;
+        else return 0;
+      case TK_EQ:
+        if (val1==val2) return 1;
+        else return 0;
+      case TK_NEQ:
+        if (val1!=val2) return 1;
+        else return 0;
+      case TK_GE:
+        if (val1>=val2) return 1;
+        else return 0;
+      case TK_LE:
+        if (val1<=val2) return 1;
+        else return 0;
       default: assert(0);
     }
   }
