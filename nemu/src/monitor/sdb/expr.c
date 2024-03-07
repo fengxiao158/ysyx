@@ -23,11 +23,11 @@
 
 enum {
   TK_NOTYPE = 256,TK_NUM,TK_NEGNUM,TK_POSNUM,TK_POINT, //TK_DERED代表着负数,TK_POSNUM代表着正数，TK_POINT代表着解指针
-
+  TK_NUMHEX, //16进制用的
   /* TODO: Add more token types */
   TK_EQ,TK_NEQ,TK_GT,TK_LT,TK_GE,TK_LE, //后四个分别是大于，小于，大于等于，小于等于
   TK_AND,TK_OR,
-  TK_REG, //表示寄存器
+  TK_GPR, //表示寄存器
 
 };
 
@@ -46,7 +46,8 @@ static struct rule {
   {"-",'-'},
   {"\\*",'*'},
   {"/",'/'},
-  {"(0x)?[0-9]+", TK_NUM},
+  {"0x[0-9a-fA-F]+", TK_NUMHEX},
+  {"[0-9]+", TK_NUM},
   {"\\(",'('},
   {"\\)",')'},
   {"<=",TK_LE},
@@ -56,7 +57,7 @@ static struct rule {
   {"!=",TK_NEQ},
   {"&&",TK_AND},
   {"\\|\\|",TK_OR},
-  {"\\$\\w+",TK_REG}, //寄存器类型,输入$EXPR
+  {"\\$\\w+",TK_GPR}, //寄存器类型,输入$EXPR
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -143,6 +144,12 @@ static bool make_token(char *e) {
             tokens[nr_token].type=TK_NUM;
             nr_token++;
             break;
+          case TK_NUMHEX:
+            strncpy(tokens[nr_token].str,substr_start,substr_len);  //将数字赋给str
+            tokens[nr_token].str[substr_len]='\0'; //末尾加上空
+            tokens[nr_token].type=TK_NUMHEX;
+            nr_token++;
+            break;
           case '(':
             tokens[nr_token].type='('; 
             nr_token++;
@@ -183,10 +190,10 @@ static bool make_token(char *e) {
             tokens[nr_token].type=TK_OR;
             nr_token++;
             break;
-          case TK_REG:
+          case TK_GPR:
             strncpy(tokens[nr_token].str,substr_start+1,substr_len);  //将数字赋给str
             tokens[nr_token].str[substr_len]='\0'; //末尾加上空
-            tokens[nr_token].type=TK_REG;
+            tokens[nr_token].type=TK_GPR;
             nr_token++;
             break;
           case TK_NOTYPE:
@@ -274,10 +281,18 @@ int eval(int p, int q, bool *state) {
       else if (tokens[p-1].type==TK_POSNUM) ret=ret;
       return ret;
     }
-    else if (tokens[p].type==TK_REG){
+    else if (tokens[p].type==TK_GPR){
       return isa_reg_str2val(tokens[p].str,state);
     }
-    // else if (tokens[p-1].type==TK_POINT) {return paddr_read(ret,8);} //16进制的计算感觉需要单独拿出来
+    else if (tokens[p].type==TK_NUMHEX){
+      ret = strtol(tokens[p].str, NULL, 16); //将字符串内的数字转为16进制的数据
+      if (tokens[p-1].type==TK_NEGNUM) ret=-ret;
+      else if (tokens[p-1].type==TK_POSNUM) ret=ret;
+      else if (tokens[p-1].type==TK_POINT){
+        return paddr_read(ret,4);
+      }
+      return ret;
+    }
     else {
       state=false;
       return 0;

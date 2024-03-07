@@ -17,8 +17,8 @@
 
 #define NR_WP 32
 
-typedef struct watchpoint {
-  int NO;
+typedef struct watchpoint { //链表的结构，指向下一个监视点
+  int NO; //监视点的序号
   struct watchpoint *next;
 
   /* TODO: Add more members if necessary */
