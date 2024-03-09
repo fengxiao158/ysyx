@@ -28,10 +28,10 @@ typedef struct watchpoint { //链表的结构，指向下一个监视点
 
 } WP;
 
-static WP wp_pool[NR_WP] = {};
-static WP *head = NULL, *free_ = NULL;
+static WP wp_pool[NR_WP] = {}; //创建一个池，用来储存数据
+static WP *head = NULL, *free_ = NULL; //head组织使用中的监视点结构，free_用于组织空闲的监视点结构
 
-void init_wp_pool() {
+void init_wp_pool() { //初始化池的内容
   int i;
   for (i = 0; i < NR_WP; i ++) {
     wp_pool[i].NO = i;
