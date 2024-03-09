@@ -20,8 +20,11 @@
 typedef struct watchpoint { //链表的结构，指向下一个监视点
   int NO; //监视点的序号
   struct watchpoint *next;
-
   /* TODO: Add more members if necessary */
+  int old_value; //旧值
+  int new_value; //新值
+  char *expr; //监视点名字
+  //最后使用log函数，得到监视点在哪个地方发生改变
 
 } WP;
 
@@ -34,7 +37,6 @@ void init_wp_pool() {
     wp_pool[i].NO = i;
     wp_pool[i].next = (i == NR_WP - 1 ? NULL : &wp_pool[i + 1]);
   }
-
   head = NULL;
   free_ = wp_pool;
 }
