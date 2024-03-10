@@ -71,9 +71,8 @@ static int cmd_info(char *args){
   }
   else if (*arg=='w')
   {
-
+    wp_scan();
   }
-
   return 0;
 }
 
@@ -110,10 +109,13 @@ static int cmd_p(char *args){
 }
 
 static int cmd_w(char *args){
+  wp_add(args);
+
   return 0;
 }
 
 static int cmd_d(char *args){
+  wp_remove(args);
   return 0;
 }
 

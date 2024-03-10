@@ -28,7 +28,7 @@ enum {
   TK_EQ,TK_NEQ,TK_GT,TK_LT,TK_GE,TK_LE, //后四个分别是大于，小于，大于等于，小于等于
   TK_AND,TK_OR,
   TK_GPR, //表示寄存器
-
+  TK_VAR, //表示字符
 };
 
 static struct rule {
@@ -58,6 +58,7 @@ static struct rule {
   {"&&",TK_AND},
   {"\\|\\|",TK_OR},
   {"\\$\\w+",TK_GPR}, //寄存器类型,输入$EXPR
+  {"[A-Za-z_]\\w*",TK_VAR},
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -111,8 +112,8 @@ static bool make_token(char *e) {
         char *substr_start = e + position;
         int substr_len = pmatch.rm_eo;
 
-        Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
-            i, rules[i].regex, position, substr_len, substr_len, substr_start);
+        // Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
+        //     i, rules[i].regex, position, substr_len, substr_len, substr_start);
 
         position += substr_len;
 
@@ -190,6 +191,11 @@ static bool make_token(char *e) {
             tokens[nr_token].type=TK_OR;
             nr_token++;
             break;
+          case TK_VAR:
+            strncpy(tokens[nr_token].str,substr_start+1,substr_len);  //将字符赋给str
+            tokens[nr_token].str[substr_len]='\0'; //末尾加上空
+            tokens[nr_token].type=TK_VAR;
+            nr_token++;
           case TK_GPR:
             strncpy(tokens[nr_token].str,substr_start+1,substr_len);  //将数字赋给str
             tokens[nr_token].str[substr_len]='\0'; //末尾加上空

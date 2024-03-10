@@ -18,6 +18,24 @@
 
 #include <common.h>
 
+typedef struct watchpoint { //链表的结构，指向下一个监视点
+  int NO; //监视点的序号
+  struct watchpoint *next;
+  /* TODO: Add more members if necessary */
+  int old_value; //旧值
+  int new_value; //新值
+  char *expr; //监视点名字
+  //最后使用log函数，得到监视点在哪个地方发生改变
+} WP;
+
 word_t expr(char *e, bool *success);
+WP *new_wp();
+void free_wp(WP *wp);
+void *return_head();
+void *return_free();
+void wp_add(char *wp_expr);
+void wp_remove(char *wp_expr);
+void wp_scan();
+void wp_compare();
 
 #endif

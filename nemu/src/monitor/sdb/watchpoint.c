@@ -17,17 +17,6 @@
 
 #define NR_WP 32
 
-typedef struct watchpoint { //链表的结构，指向下一个监视点
-  int NO; //监视点的序号
-  struct watchpoint *next;
-  /* TODO: Add more members if necessary */
-  int old_value; //旧值
-  int new_value; //新值
-  char *expr; //监视点名字
-  //最后使用log函数，得到监视点在哪个地方发生改变
-
-} WP;
-
 static WP wp_pool[NR_WP] = {}; //创建一个池，用来储存数据，全局变量里面创建的变量，初始值为0
 static WP *head = NULL, *free_ = NULL; //head组织使用中的监视点结构，free_用于组织空闲的监视点结构
 int wp_num=0;
@@ -40,6 +29,14 @@ void init_wp_pool() { //初始化池的内容
   }
   head = NULL;
   free_ = wp_pool;
+}
+
+void *return_head(){
+  return head;
+}
+
+void *return_free(){
+  return free;
 }
 
 /* TODO: Implement the functionality of watchpoint */
@@ -82,16 +79,63 @@ void free_wp(WP *wp){
   }
   pre->next=wp;
   if (wp_num==1){ //当监视点只有一个的情况
-    wp_num--;
     head=NULL;
   }
   else {
     pre=head;
-    while (pre->next!=wp){
+    while (pre!=wp){
       pre=pre->next;
     }
     pre->next=wp->next;
   }
   wp->next=NULL;
   wp_num--;
+}
+
+void wp_add(char *wp_expr){
+  WP *wp=new_wp();
+  bool *success=malloc(sizeof(bool));
+  wp->expr=wp_expr;
+  // wp->old_value=expr(wp_expr,success); //程序里面才会有变量，但我不知道这个程序变量要怎么弄
+  printf("Watchpoint %d: %s\n",wp->NO,wp_expr);
+  free(success);
+}
+
+void wp_remove(char *wp_expr){
+  WP *wp=head;
+  while (wp->expr!=wp_expr){
+    wp=wp->next;
+    if (wp->next==NULL){
+      panic("delete watchpoint error!");
+    }
+  }
+  printf("Delete watchpoint %d: %s\n",wp->NO,wp->expr);
+  free_wp(wp);
+}
+
+void wp_scan(){
+  WP *wp=head;
+  if (wp==NULL){
+    printf("No watchpoints");
+    return ;
+  }
+  while (wp!=NULL){
+    printf("watchpoint%d : %s\n",wp->NO,wp->expr);
+    wp=wp->next;
+  }
+}
+
+void wp_compare(){
+  WP *wp=head;
+  bool *success=malloc(sizeof(success));
+  while (wp!=NULL){
+    word_t new=expr(wp->expr,success);
+    if (wp->new_value!=new){
+      printf("watchpoint %d:%s\n",wp->NO,wp->expr);
+      printf("old value:%d",wp->old_value);
+      printf("new value:%d",wp->new_value);
+      wp->old_value=new;
+    }
+    wp=wp->next;
+  }
 }
