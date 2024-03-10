@@ -28,8 +28,9 @@ typedef struct watchpoint { //链表的结构，指向下一个监视点
 
 } WP;
 
-static WP wp_pool[NR_WP] = {}; //创建一个池，用来储存数据
+static WP wp_pool[NR_WP] = {}; //创建一个池，用来储存数据，全局变量里面创建的变量，初始值为0
 static WP *head = NULL, *free_ = NULL; //head组织使用中的监视点结构，free_用于组织空闲的监视点结构
+int wp_num=0;
 
 void init_wp_pool() { //初始化池的内容
   int i;
@@ -43,3 +44,54 @@ void init_wp_pool() { //初始化池的内容
 
 /* TODO: Implement the functionality of watchpoint */
 
+WP *new_wp(){
+  WP *pre;
+  pre=head;
+  if (wp_num==0){ //第一个节点
+    head=free_; 
+    free_=free_->next;
+    head->next=NULL;
+    head->expr="expr";
+    head->new_value=0;
+    head->old_value=0;
+    wp_num++;
+    return head;
+  }
+  else if (wp_num!=0&&wp_num<32){
+    while (pre->next!=NULL){
+      pre=pre->next;
+    }
+    pre->next=free_;
+    pre=free_;
+    free_=free_->next;
+    pre->next=NULL;
+    pre->expr="expr";
+    pre->new_value=0;
+    pre->old_value=0;
+    wp_num++;
+    return pre;
+  }
+  else panic("too many watchpoint!");
+}
+
+void free_wp(WP *wp){
+  WP *pre;
+  pre=free_;
+  while (pre->next!=NULL){
+    pre=pre->next;
+  }
+  pre->next=wp;
+  if (wp_num==1){ //当监视点只有一个的情况
+    wp_num--;
+    head=NULL;
+  }
+  else {
+    pre=head;
+    while (pre->next!=wp){
+      pre=pre->next;
+    }
+    pre->next=wp->next;
+  }
+  wp->next=NULL;
+  wp_num--;
+}
